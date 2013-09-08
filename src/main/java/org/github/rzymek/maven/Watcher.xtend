@@ -9,10 +9,11 @@ import java.nio.file.WatchEvent
 import java.nio.file.WatchKey
 import java.util.List
 import java.util.Map
+import org.apache.maven.Maven
+import org.apache.maven.execution.DefaultMavenExecutionRequest
 import org.apache.maven.execution.MavenSession
 import org.apache.maven.model.Plugin
 import org.apache.maven.plugin.AbstractMojo
-import org.apache.maven.plugin.BuildPluginManager
 import org.apache.maven.plugin.MojoExecutionException
 import org.apache.maven.plugin.MojoFailureException
 import org.apache.maven.plugin.prefix.DefaultPluginPrefixRequest
@@ -23,9 +24,6 @@ import org.apache.maven.plugins.annotations.Component
 import org.apache.maven.plugins.annotations.Mojo
 import org.apache.maven.plugins.annotations.Parameter
 import org.apache.maven.plugins.annotations.ResolutionScope
-import org.apache.maven.project.MavenProject
-
-import static org.twdata.maven.mojoexecutor.MojoExecutor.*
 
 class Watch {
 	public File on
@@ -40,40 +38,36 @@ class PluginGoal {
 
 @Mojo(name='run', requiresDependencyResolution=ResolutionScope::COMPILE_PLUS_RUNTIME)
 class Watcher extends AbstractMojo {
-	@Parameter(defaultValue='${project}', required=true, readonly=true)
-	MavenProject project
 	@Parameter(defaultValue='${session}', required=true, readonly=true)
 	MavenSession session
-	@Component
-	BuildPluginManager buildPluginManager
 	@Parameter(required=true)
 	List<Watch> watch
 	@Component
 	PluginPrefixResolver pluginPrefixResolver
 	@Component
 	PluginVersionResolver pluginVersionResolver;
+	@Component 
+	Maven maven
 
 	override execute() throws MojoExecutionException, MojoFailureException {
 		for(w : watch) {
 			register(w.on)			
 		}
-		val Map<String, List<PluginGoal>> watchMap = newHashMap()
+		val Map<String, List<String>> watchMap = newHashMap()
 		for(w : watch) {
-			val goal = w.run.split(' ').map[split(':').map[trim]]
-				.map[get(0) -> get(1)]
-				.map[new PluginGoal(resolve(key), value)]
+			val goal = w.run.split(' ').map[trim]
 			watchMap.put(w.on.absolutePath, goal)
 		}
 		log.info("Waiting: "+watch.map[on]);
 		watchLoop[			
-			watchMap.get(it.absolutePath)?.forEach [
-				executeMojo(it.plugin, it.goal, configuration(),
-					executionEnvironment(
-						project,
-						session,
-						buildPluginManager
-					))
-			]]
+				val goals = watchMap.get(it.absolutePath)
+				if(goals != null) {
+					log.info(it +" changed -> ["+goals.join(' ')+"]");
+					val request=DefaultMavenExecutionRequest.copy(session.request);
+					request.setGoals(goals);				
+					maven.execute(request)
+				}  
+			]
 	}
 
 	def resolve(String prefix) {
@@ -84,8 +78,7 @@ class Watcher extends AbstractMojo {
 		
 		var versionRequest = new DefaultPluginVersionRequest(
 			plugin,
-			session.getRepositorySession(), 
-			project.getRemotePluginRepositories());
+			session) 
 		plugin.version = pluginVersionResolver.resolve(versionRequest).getVersion();
 		return plugin
 	}

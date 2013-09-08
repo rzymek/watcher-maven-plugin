@@ -13,10 +13,12 @@ import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
 import java.util.List;
 import java.util.Map;
+import org.apache.maven.Maven;
+import org.apache.maven.execution.DefaultMavenExecutionRequest;
+import org.apache.maven.execution.MavenExecutionRequest;
 import org.apache.maven.execution.MavenSession;
 import org.apache.maven.model.Plugin;
 import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.BuildPluginManager;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugin.logging.Log;
@@ -30,8 +32,6 @@ import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
-import org.apache.maven.project.MavenProject;
-import org.codehaus.plexus.util.xml.Xpp3Dom;
 import org.eclipse.xtext.xbase.lib.CollectionLiterals;
 import org.eclipse.xtext.xbase.lib.Conversions;
 import org.eclipse.xtext.xbase.lib.Exceptions;
@@ -39,26 +39,14 @@ import org.eclipse.xtext.xbase.lib.Functions.Function0;
 import org.eclipse.xtext.xbase.lib.Functions.Function1;
 import org.eclipse.xtext.xbase.lib.IterableExtensions;
 import org.eclipse.xtext.xbase.lib.ListExtensions;
-import org.eclipse.xtext.xbase.lib.Pair;
 import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
-import org.github.rzymek.maven.PluginGoal;
 import org.github.rzymek.maven.Watch;
-import org.sonatype.aether.RepositorySystemSession;
-import org.sonatype.aether.repository.RemoteRepository;
-import org.twdata.maven.mojoexecutor.MojoExecutor;
-import org.twdata.maven.mojoexecutor.MojoExecutor.ExecutionEnvironment;
 
 @Mojo(name = "run", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
 @SuppressWarnings("all")
 public class Watcher extends AbstractMojo {
-  @Parameter(defaultValue = "${project}", required = true, readonly = true)
-  private MavenProject project;
-  
   @Parameter(defaultValue = "${session}", required = true, readonly = true)
   private MavenSession session;
-  
-  @Component
-  private BuildPluginManager buildPluginManager;
   
   @Parameter(required = true)
   private List<Watch> watch;
@@ -69,47 +57,24 @@ public class Watcher extends AbstractMojo {
   @Component
   private PluginVersionResolver pluginVersionResolver;
   
+  @Component
+  private Maven maven;
+  
   public void execute() throws MojoExecutionException, MojoFailureException {
     for (final Watch w : this.watch) {
       this.register(w.on);
     }
-    final Map<String,List<PluginGoal>> watchMap = CollectionLiterals.<String, List<PluginGoal>>newHashMap();
+    final Map<String,List<String>> watchMap = CollectionLiterals.<String, List<String>>newHashMap();
     for (final Watch w_1 : this.watch) {
       {
         String[] _split = w_1.run.split(" ");
-        final Function1<String,List<String>> _function = new Function1<String,List<String>>() {
-          public List<String> apply(final String it) {
-            String[] _split = it.split(":");
-            final Function1<String,String> _function = new Function1<String,String>() {
-              public String apply(final String it) {
-                String _trim = it.trim();
-                return _trim;
-              }
-            };
-            List<String> _map = ListExtensions.<String, String>map(((List<String>)Conversions.doWrapArray(_split)), _function);
-            return _map;
+        final Function1<String,String> _function = new Function1<String,String>() {
+          public String apply(final String it) {
+            String _trim = it.trim();
+            return _trim;
           }
         };
-        List<List<String>> _map = ListExtensions.<String, List<String>>map(((List<String>)Conversions.doWrapArray(_split)), _function);
-        final Function1<List<String>,Pair<String,String>> _function_1 = new Function1<List<String>,Pair<String,String>>() {
-          public Pair<String,String> apply(final List<String> it) {
-            String _get = it.get(0);
-            String _get_1 = it.get(1);
-            Pair<String,String> _mappedTo = Pair.<String, String>of(_get, _get_1);
-            return _mappedTo;
-          }
-        };
-        List<Pair<String,String>> _map_1 = ListExtensions.<List<String>, Pair<String,String>>map(_map, _function_1);
-        final Function1<Pair<String,String>,PluginGoal> _function_2 = new Function1<Pair<String,String>,PluginGoal>() {
-          public PluginGoal apply(final Pair<String,String> it) {
-            String _key = it.getKey();
-            Plugin _resolve = Watcher.this.resolve(_key);
-            String _value = it.getValue();
-            PluginGoal _pluginGoal = new PluginGoal(_resolve, _value);
-            return _pluginGoal;
-          }
-        };
-        final List<PluginGoal> goal = ListExtensions.<Pair<String,String>, PluginGoal>map(_map_1, _function_2);
+        final List<String> goal = ListExtensions.<String, String>map(((List<String>)Conversions.doWrapArray(_split)), _function);
         String _absolutePath = w_1.on.getAbsolutePath();
         watchMap.put(_absolutePath, goal);
       }
@@ -126,25 +91,19 @@ public class Watcher extends AbstractMojo {
     final Procedure1<File> _function_1 = new Procedure1<File>() {
       public void apply(final File it) {
         String _absolutePath = it.getAbsolutePath();
-        List<PluginGoal> _get = watchMap.get(_absolutePath);
-        if (_get!=null) {
-          final Procedure1<PluginGoal> _function = new Procedure1<PluginGoal>() {
-            public void apply(final PluginGoal it) {
-              try {
-                Plugin _plugin = it.getPlugin();
-                String _goal = it.getGoal();
-                Xpp3Dom _configuration = MojoExecutor.configuration();
-                ExecutionEnvironment _executionEnvironment = MojoExecutor.executionEnvironment(
-                  Watcher.this.project, 
-                  Watcher.this.session, 
-                  Watcher.this.buildPluginManager);
-                MojoExecutor.executeMojo(_plugin, _goal, _configuration, _executionEnvironment);
-              } catch (Throwable _e) {
-                throw Exceptions.sneakyThrow(_e);
-              }
-            }
-          };
-          IterableExtensions.<PluginGoal>forEach(_get, _function);
+        final List<String> goals = watchMap.get(_absolutePath);
+        boolean _notEquals = (!Objects.equal(goals, null));
+        if (_notEquals) {
+          Log _log = Watcher.this.getLog();
+          String _plus = (it + " changed -> [");
+          String _join = IterableExtensions.join(goals, " ");
+          String _plus_1 = (_plus + _join);
+          String _plus_2 = (_plus_1 + "]");
+          _log.info(_plus_2);
+          MavenExecutionRequest _request = Watcher.this.session.getRequest();
+          final MavenExecutionRequest request = DefaultMavenExecutionRequest.copy(_request);
+          request.setGoals(goals);
+          Watcher.this.maven.execute(request);
         }
       }
     };
@@ -161,9 +120,8 @@ public class Watcher extends AbstractMojo {
       plugin.setGroupId(_groupId);
       String _artifactId = pluginResult.getArtifactId();
       plugin.setArtifactId(_artifactId);
-      RepositorySystemSession _repositorySession = this.session.getRepositorySession();
-      List<RemoteRepository> _remotePluginRepositories = this.project.getRemotePluginRepositories();
-      DefaultPluginVersionRequest _defaultPluginVersionRequest = new DefaultPluginVersionRequest(plugin, _repositorySession, _remotePluginRepositories);
+      DefaultPluginVersionRequest _defaultPluginVersionRequest = new DefaultPluginVersionRequest(plugin, 
+        this.session);
       DefaultPluginVersionRequest versionRequest = _defaultPluginVersionRequest;
       PluginVersionResult _resolve = this.pluginVersionResolver.resolve(versionRequest);
       String _version = _resolve.getVersion();
