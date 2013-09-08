@@ -48,7 +48,7 @@ import org.sonatype.aether.repository.RemoteRepository;
 import org.twdata.maven.mojoexecutor.MojoExecutor;
 import org.twdata.maven.mojoexecutor.MojoExecutor.ExecutionEnvironment;
 
-@Mojo(name = "watcher", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
+@Mojo(name = "run", requiresDependencyResolution = ResolutionScope.COMPILE_PLUS_RUNTIME)
 @SuppressWarnings("all")
 public class Watcher extends AbstractMojo {
   @Parameter(defaultValue = "${project}", required = true, readonly = true)
@@ -76,15 +76,8 @@ public class Watcher extends AbstractMojo {
     final Map<String,List<PluginGoal>> watchMap = CollectionLiterals.<String, List<PluginGoal>>newHashMap();
     for (final Watch w_1 : this.watch) {
       {
-        String[] _split = w_1.run.split(",");
-        final Function1<String,String> _function = new Function1<String,String>() {
-          public String apply(final String it) {
-            String _trim = it.trim();
-            return _trim;
-          }
-        };
-        List<String> _map = ListExtensions.<String, String>map(((List<String>)Conversions.doWrapArray(_split)), _function);
-        final Function1<String,List<String>> _function_1 = new Function1<String,List<String>>() {
+        String[] _split = w_1.run.split(" ");
+        final Function1<String,List<String>> _function = new Function1<String,List<String>>() {
           public List<String> apply(final String it) {
             String[] _split = it.split(":");
             final Function1<String,String> _function = new Function1<String,String>() {
@@ -97,8 +90,8 @@ public class Watcher extends AbstractMojo {
             return _map;
           }
         };
-        List<List<String>> _map_1 = ListExtensions.<String, List<String>>map(_map, _function_1);
-        final Function1<List<String>,Pair<String,String>> _function_2 = new Function1<List<String>,Pair<String,String>>() {
+        List<List<String>> _map = ListExtensions.<String, List<String>>map(((List<String>)Conversions.doWrapArray(_split)), _function);
+        final Function1<List<String>,Pair<String,String>> _function_1 = new Function1<List<String>,Pair<String,String>>() {
           public Pair<String,String> apply(final List<String> it) {
             String _get = it.get(0);
             String _get_1 = it.get(1);
@@ -106,8 +99,8 @@ public class Watcher extends AbstractMojo {
             return _mappedTo;
           }
         };
-        List<Pair<String,String>> _map_2 = ListExtensions.<List<String>, Pair<String,String>>map(_map_1, _function_2);
-        final Function1<Pair<String,String>,PluginGoal> _function_3 = new Function1<Pair<String,String>,PluginGoal>() {
+        List<Pair<String,String>> _map_1 = ListExtensions.<List<String>, Pair<String,String>>map(_map, _function_1);
+        final Function1<Pair<String,String>,PluginGoal> _function_2 = new Function1<Pair<String,String>,PluginGoal>() {
           public PluginGoal apply(final Pair<String,String> it) {
             String _key = it.getKey();
             Plugin _resolve = Watcher.this.resolve(_key);
@@ -116,7 +109,7 @@ public class Watcher extends AbstractMojo {
             return _pluginGoal;
           }
         };
-        final List<PluginGoal> goal = ListExtensions.<Pair<String,String>, PluginGoal>map(_map_2, _function_3);
+        final List<PluginGoal> goal = ListExtensions.<Pair<String,String>, PluginGoal>map(_map_1, _function_2);
         String _absolutePath = w_1.on.getAbsolutePath();
         watchMap.put(_absolutePath, goal);
       }

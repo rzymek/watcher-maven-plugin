@@ -38,7 +38,7 @@ class PluginGoal {
 	String goal;	
 }
 
-@Mojo(name='watcher', requiresDependencyResolution=ResolutionScope::COMPILE_PLUS_RUNTIME)
+@Mojo(name='run', requiresDependencyResolution=ResolutionScope::COMPILE_PLUS_RUNTIME)
 class Watcher extends AbstractMojo {
 	@Parameter(defaultValue='${project}', required=true, readonly=true)
 	MavenProject project
@@ -59,7 +59,7 @@ class Watcher extends AbstractMojo {
 		}
 		val Map<String, List<PluginGoal>> watchMap = newHashMap()
 		for(w : watch) {
-			val goal = w.run.split(',').map[trim].map[split(':').map[trim]]
+			val goal = w.run.split(' ').map[split(':').map[trim]]
 				.map[get(0) -> get(1)]
 				.map[new PluginGoal(resolve(key), value)]
 			watchMap.put(w.on.absolutePath, goal)
