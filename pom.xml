@@ -87,5 +87,11 @@
 			</plugin>
 		</plugins>
 	</build>
-
+	<distributionManagement>
+		<snapshotRepository>
+			<id>snapshots</id>
+			<layout>default</layout>
+			<url>file:///home/rzymek/devel/github/repository/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
 </project>
