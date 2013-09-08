@@ -39,8 +39,8 @@ import org.eclipse.xtext.xbase.lib.Functions.Function0;
 import org.eclipse.xtext.xbase.lib.Functions.Function1;
 import org.eclipse.xtext.xbase.lib.IterableExtensions;
 import org.eclipse.xtext.xbase.lib.ListExtensions;
+import org.eclipse.xtext.xbase.lib.Pair;
 import org.eclipse.xtext.xbase.lib.Procedures.Procedure1;
-import org.github.rzymek.maven.Goal;
 import org.github.rzymek.maven.PluginGoal;
 import org.github.rzymek.maven.Watch;
 import org.sonatype.aether.RepositorySystemSession;
@@ -78,83 +78,83 @@ public class Watcher extends AbstractMojo {
       {
         String[] _split = w_1.run.split(",");
         final Function1<String,String> _function = new Function1<String,String>() {
-            public String apply(final String it) {
-              String _trim = it.trim();
-              return _trim;
-            }
-          };
+          public String apply(final String it) {
+            String _trim = it.trim();
+            return _trim;
+          }
+        };
         List<String> _map = ListExtensions.<String, String>map(((List<String>)Conversions.doWrapArray(_split)), _function);
         final Function1<String,List<String>> _function_1 = new Function1<String,List<String>>() {
-            public List<String> apply(final String it) {
-              String[] _split = it.split(":");
-              final Function1<String,String> _function = new Function1<String,String>() {
-                  public String apply(final String it) {
-                    String _trim = it.trim();
-                    return _trim;
-                  }
-                };
-              List<String> _map = ListExtensions.<String, String>map(((List<String>)Conversions.doWrapArray(_split)), _function);
-              return _map;
-            }
-          };
+          public List<String> apply(final String it) {
+            String[] _split = it.split(":");
+            final Function1<String,String> _function = new Function1<String,String>() {
+              public String apply(final String it) {
+                String _trim = it.trim();
+                return _trim;
+              }
+            };
+            List<String> _map = ListExtensions.<String, String>map(((List<String>)Conversions.doWrapArray(_split)), _function);
+            return _map;
+          }
+        };
         List<List<String>> _map_1 = ListExtensions.<String, List<String>>map(_map, _function_1);
-        final Function1<List<String>,Goal> _function_2 = new Function1<List<String>,Goal>() {
-            public Goal apply(final List<String> it) {
-              String _get = it.get(0);
-              String _get_1 = it.get(1);
-              Goal _goal = new Goal(_get, _get_1);
-              return _goal;
-            }
-          };
-        List<Goal> _map_2 = ListExtensions.<List<String>, Goal>map(_map_1, _function_2);
-        final Function1<Goal,PluginGoal> _function_3 = new Function1<Goal,PluginGoal>() {
-            public PluginGoal apply(final Goal it) {
-              String _prefix = it.getPrefix();
-              Plugin _resolve = Watcher.this.resolve(_prefix);
-              String _goal = it.getGoal();
-              PluginGoal _pluginGoal = new PluginGoal(_resolve, _goal);
-              return _pluginGoal;
-            }
-          };
-        final List<PluginGoal> goal = ListExtensions.<Goal, PluginGoal>map(_map_2, _function_3);
+        final Function1<List<String>,Pair<String,String>> _function_2 = new Function1<List<String>,Pair<String,String>>() {
+          public Pair<String,String> apply(final List<String> it) {
+            String _get = it.get(0);
+            String _get_1 = it.get(1);
+            Pair<String,String> _mappedTo = Pair.<String, String>of(_get, _get_1);
+            return _mappedTo;
+          }
+        };
+        List<Pair<String,String>> _map_2 = ListExtensions.<List<String>, Pair<String,String>>map(_map_1, _function_2);
+        final Function1<Pair<String,String>,PluginGoal> _function_3 = new Function1<Pair<String,String>,PluginGoal>() {
+          public PluginGoal apply(final Pair<String,String> it) {
+            String _key = it.getKey();
+            Plugin _resolve = Watcher.this.resolve(_key);
+            String _value = it.getValue();
+            PluginGoal _pluginGoal = new PluginGoal(_resolve, _value);
+            return _pluginGoal;
+          }
+        };
+        final List<PluginGoal> goal = ListExtensions.<Pair<String,String>, PluginGoal>map(_map_2, _function_3);
         String _absolutePath = w_1.on.getAbsolutePath();
         watchMap.put(_absolutePath, goal);
       }
     }
     Log _log = this.getLog();
     final Function1<Watch,File> _function = new Function1<Watch,File>() {
-        public File apply(final Watch it) {
-          return it.on;
-        }
-      };
+      public File apply(final Watch it) {
+        return it.on;
+      }
+    };
     List<File> _map = ListExtensions.<Watch, File>map(this.watch, _function);
     String _plus = ("Waiting: " + _map);
     _log.info(_plus);
     final Procedure1<File> _function_1 = new Procedure1<File>() {
-        public void apply(final File it) {
-          String _absolutePath = it.getAbsolutePath();
-          List<PluginGoal> _get = watchMap.get(_absolutePath);
-          if (_get!=null) {
-            final Procedure1<PluginGoal> _function = new Procedure1<PluginGoal>() {
-                public void apply(final PluginGoal it) {
-                  try {
-                    Plugin _plugin = it.getPlugin();
-                    String _goal = it.getGoal();
-                    Xpp3Dom _configuration = MojoExecutor.configuration();
-                    ExecutionEnvironment _executionEnvironment = MojoExecutor.executionEnvironment(
-                      Watcher.this.project, 
-                      Watcher.this.session, 
-                      Watcher.this.buildPluginManager);
-                    MojoExecutor.executeMojo(_plugin, _goal, _configuration, _executionEnvironment);
-                  } catch (Throwable _e) {
-                    throw Exceptions.sneakyThrow(_e);
-                  }
-                }
-              };
-            IterableExtensions.<PluginGoal>forEach(_get, _function);
-          }
+      public void apply(final File it) {
+        String _absolutePath = it.getAbsolutePath();
+        List<PluginGoal> _get = watchMap.get(_absolutePath);
+        if (_get!=null) {
+          final Procedure1<PluginGoal> _function = new Procedure1<PluginGoal>() {
+            public void apply(final PluginGoal it) {
+              try {
+                Plugin _plugin = it.getPlugin();
+                String _goal = it.getGoal();
+                Xpp3Dom _configuration = MojoExecutor.configuration();
+                ExecutionEnvironment _executionEnvironment = MojoExecutor.executionEnvironment(
+                  Watcher.this.project, 
+                  Watcher.this.session, 
+                  Watcher.this.buildPluginManager);
+                MojoExecutor.executeMojo(_plugin, _goal, _configuration, _executionEnvironment);
+              } catch (Throwable _e) {
+                throw Exceptions.sneakyThrow(_e);
+              }
+            }
+          };
+          IterableExtensions.<PluginGoal>forEach(_get, _function);
         }
-      };
+      }
+    };
     this.watchLoop(_function_1);
   }
   
@@ -210,32 +210,32 @@ public class Watcher extends AbstractMojo {
           key = _take;
           List<WatchEvent<? extends Object>> _pollEvents = key.pollEvents();
           final Function1<WatchEvent<? extends Object>,Boolean> _function = new Function1<WatchEvent<? extends Object>,Boolean>() {
-              public Boolean apply(final WatchEvent<? extends Object> it) {
-                Kind<? extends Object> _kind = it.kind();
-                boolean _notEquals = (!Objects.equal(_kind, StandardWatchEventKinds.OVERFLOW));
-                return Boolean.valueOf(_notEquals);
-              }
-            };
+            public Boolean apply(final WatchEvent<? extends Object> it) {
+              Kind<? extends Object> _kind = it.kind();
+              boolean _notEquals = (!Objects.equal(_kind, StandardWatchEventKinds.OVERFLOW));
+              return Boolean.valueOf(_notEquals);
+            }
+          };
           Iterable<WatchEvent<? extends Object>> _filter = IterableExtensions.<WatchEvent<? extends Object>>filter(_pollEvents, _function);
           final Function1<WatchEvent<? extends Object>,WatchEvent<Path>> _function_1 = new Function1<WatchEvent<? extends Object>,WatchEvent<Path>>() {
-              public WatchEvent<Path> apply(final WatchEvent<? extends Object> it) {
-                return ((WatchEvent<Path>) it);
-              }
-            };
+            public WatchEvent<Path> apply(final WatchEvent<? extends Object> it) {
+              return ((WatchEvent<Path>) it);
+            }
+          };
           Iterable<WatchEvent<Path>> _map = IterableExtensions.<WatchEvent<? extends Object>, WatchEvent<Path>>map(_filter, _function_1);
           final Function1<WatchEvent<Path>,File> _function_2 = new Function1<WatchEvent<Path>,File>() {
-              public File apply(final WatchEvent<Path> it) {
-                Path _context = it.context();
-                File _file = _context.toFile();
-                return _file;
-              }
-            };
+            public File apply(final WatchEvent<Path> it) {
+              Path _context = it.context();
+              File _file = _context.toFile();
+              return _file;
+            }
+          };
           Iterable<File> _map_1 = IterableExtensions.<WatchEvent<Path>, File>map(_map, _function_2);
           final Procedure1<File> _function_3 = new Procedure1<File>() {
-              public void apply(final File it) {
-                run.apply(it);
-              }
-            };
+            public void apply(final File it) {
+              run.apply(it);
+            }
+          };
           IterableExtensions.<File>forEach(_map_1, _function_3);
         }
         boolean _reset = key.reset();

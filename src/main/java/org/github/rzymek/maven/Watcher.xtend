@@ -31,11 +31,7 @@ class Watch {
 	public File on
 	public String run	
 }
-@Data
-class Goal {
-	String prefix;
-	String goal;
-}
+
 @Data 
 class PluginGoal {
 	Plugin plugin;
@@ -64,8 +60,8 @@ class Watcher extends AbstractMojo {
 		val Map<String, List<PluginGoal>> watchMap = newHashMap()
 		for(w : watch) {
 			val goal = w.run.split(',').map[trim].map[split(':').map[trim]]
-				.map[new Goal(get(0), get(1))]
-				.map[new PluginGoal(resolve(prefix), goal)]
+				.map[get(0) -> get(1)]
+				.map[new PluginGoal(resolve(key), value)]
 			watchMap.put(w.on.absolutePath, goal)
 		}
 		log.info("Waiting: "+watch.map[on]);
