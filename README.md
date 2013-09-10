@@ -2,6 +2,7 @@ watcher-maven-plugin
 ====================
 
 Watches files for modifications. On such event executes specified maven goals.
+
 Use case: regenerating exploaded WAR or Eclipse project when dependencies change
 
 Usage:
