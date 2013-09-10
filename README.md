@@ -24,7 +24,7 @@ Usage:
 		<build>
 			<plugins>
 				<plugin> 
-					<groupId>org.github.rzymek</groupId>
+					<groupId>watcher</groupId>
 					<artifactId>watcher-maven-plugin</artifactId>
 					<version>1.0-SNAPSHOT</version>
 					<configuration>
