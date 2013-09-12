@@ -6,7 +6,6 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.StandardWatchEventKinds
 import java.nio.file.WatchEvent
-import java.nio.file.WatchKey
 import java.util.List
 import java.util.Map
 import org.apache.maven.Maven
@@ -59,8 +58,9 @@ class Watcher extends AbstractMojo {
 			watchMap.put(w.on.absolutePath, goal)
 		}
 		log.info("Waiting: "+watch.map[on]);
-		watchLoop[			
+		watchLoop[
 				val goals = watchMap.get(it.absolutePath)
+				log.debug(it + " -> " + goals)
 				if(goals != null) {
 					log.info(it +" changed -> ["+goals.join(' ')+"]");
 					val request=DefaultMavenExecutionRequest.copy(session.request);
@@ -90,20 +90,24 @@ class Watcher extends AbstractMojo {
 	}
 
 	def watchLoop((File)=>void run) {
-		var WatchKey key;
-		do {
+		var valid = true;
+		while(valid) {
 			log.info("Waiting for modifications...");
-			key = watchService.take
+			val key = watchService.take
 			key.pollEvents
-				.filter[kind != StandardWatchEventKinds.OVERFLOW]
+				.map[log.debug("WatchService event: "+it.kind+":"+it.context); it]
 				.map[it as WatchEvent<Path>]
-				.map[context.toFile]
+				.filter[kind != StandardWatchEventKinds.OVERFLOW]
+				.map[(key.watchable as Path).resolve(it.context)]				
+				.map[toFile]
 				.forEach[run.apply(it)]
-		} while (key.reset)
+			valid = key.reset
+		} 
 	}
 
 	def register(File file) {
 		val path = Paths.get(file.absoluteFile.parent)
+		log.debug("register: "+path + "\t"+file+"\n"+path.absolute)
 		path.register(watchService, StandardWatchEventKinds.ENTRY_MODIFY)
 	}
 }
