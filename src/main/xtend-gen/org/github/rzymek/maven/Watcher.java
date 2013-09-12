@@ -11,6 +11,7 @@ import java.nio.file.WatchEvent;
 import java.nio.file.WatchEvent.Kind;
 import java.nio.file.WatchKey;
 import java.nio.file.WatchService;
+import java.nio.file.Watchable;
 import java.util.List;
 import java.util.Map;
 import org.apache.maven.Maven;
@@ -69,11 +70,11 @@ public class Watcher extends AbstractMojo {
       {
         String[] _split = w_1.run.split(" ");
         final Function1<String,String> _function = new Function1<String,String>() {
-          public String apply(final String it) {
-            String _trim = it.trim();
-            return _trim;
-          }
-        };
+            public String apply(final String it) {
+              String _trim = it.trim();
+              return _trim;
+            }
+          };
         final List<String> goal = ListExtensions.<String, String>map(((List<String>)Conversions.doWrapArray(_split)), _function);
         String _absolutePath = w_1.on.getAbsolutePath();
         watchMap.put(_absolutePath, goal);
@@ -81,32 +82,36 @@ public class Watcher extends AbstractMojo {
     }
     Log _log = this.getLog();
     final Function1<Watch,File> _function = new Function1<Watch,File>() {
-      public File apply(final Watch it) {
-        return it.on;
-      }
-    };
+        public File apply(final Watch it) {
+          return it.on;
+        }
+      };
     List<File> _map = ListExtensions.<Watch, File>map(this.watch, _function);
     String _plus = ("Waiting: " + _map);
     _log.info(_plus);
     final Procedure1<File> _function_1 = new Procedure1<File>() {
-      public void apply(final File it) {
-        String _absolutePath = it.getAbsolutePath();
-        final List<String> goals = watchMap.get(_absolutePath);
-        boolean _notEquals = (!Objects.equal(goals, null));
-        if (_notEquals) {
+        public void apply(final File it) {
+          String _absolutePath = it.getAbsolutePath();
+          final List<String> goals = watchMap.get(_absolutePath);
           Log _log = Watcher.this.getLog();
-          String _plus = (it + " changed -> [");
-          String _join = IterableExtensions.join(goals, " ");
-          String _plus_1 = (_plus + _join);
-          String _plus_2 = (_plus_1 + "]");
-          _log.info(_plus_2);
-          MavenExecutionRequest _request = Watcher.this.session.getRequest();
-          final MavenExecutionRequest request = DefaultMavenExecutionRequest.copy(_request);
-          request.setGoals(goals);
-          Watcher.this.maven.execute(request);
+          String _plus = (it + " -> ");
+          String _plus_1 = (_plus + goals);
+          _log.debug(_plus_1);
+          boolean _notEquals = (!Objects.equal(goals, null));
+          if (_notEquals) {
+            Log _log_1 = Watcher.this.getLog();
+            String _plus_2 = (it + " changed -> [");
+            String _join = IterableExtensions.join(goals, " ");
+            String _plus_3 = (_plus_2 + _join);
+            String _plus_4 = (_plus_3 + "]");
+            _log_1.info(_plus_4);
+            MavenExecutionRequest _request = Watcher.this.session.getRequest();
+            final MavenExecutionRequest request = DefaultMavenExecutionRequest.copy(_request);
+            request.setGoals(goals);
+            Watcher.this.maven.execute(request);
+          }
         }
-      }
-    };
+      };
     this.watchLoop(_function_1);
   }
   
@@ -151,47 +156,72 @@ public class Watcher extends AbstractMojo {
   
   public void watchLoop(final Procedure1<? super File> run) {
     try {
-      WatchKey key = null;
-      boolean _dowhile = false;
-      do {
+      boolean valid = true;
+      boolean _while = valid;
+      while (_while) {
         {
           Log _log = this.getLog();
           _log.info("Waiting for modifications...");
-          WatchKey _take = this.watchService.take();
-          key = _take;
+          final WatchKey key = this.watchService.take();
           List<WatchEvent<? extends Object>> _pollEvents = key.pollEvents();
-          final Function1<WatchEvent<? extends Object>,Boolean> _function = new Function1<WatchEvent<? extends Object>,Boolean>() {
-            public Boolean apply(final WatchEvent<? extends Object> it) {
-              Kind<? extends Object> _kind = it.kind();
-              boolean _notEquals = (!Objects.equal(_kind, StandardWatchEventKinds.OVERFLOW));
-              return Boolean.valueOf(_notEquals);
-            }
-          };
-          Iterable<WatchEvent<? extends Object>> _filter = IterableExtensions.<WatchEvent<? extends Object>>filter(_pollEvents, _function);
+          final Function1<WatchEvent<? extends Object>,WatchEvent<? extends Object>> _function = new Function1<WatchEvent<? extends Object>,WatchEvent<? extends Object>>() {
+              public WatchEvent<? extends Object> apply(final WatchEvent<? extends Object> it) {
+                WatchEvent<? extends Object> _xblockexpression = null;
+                {
+                  Log _log = Watcher.this.getLog();
+                  Kind<? extends Object> _kind = it.kind();
+                  String _plus = ("WatchService event: " + _kind);
+                  String _plus_1 = (_plus + ":");
+                  Object _context = it.context();
+                  String _plus_2 = (_plus_1 + _context);
+                  _log.debug(_plus_2);
+                  _xblockexpression = (it);
+                }
+                return _xblockexpression;
+              }
+            };
+          List<WatchEvent<? extends Object>> _map = ListExtensions.<WatchEvent<? extends Object>, WatchEvent<? extends Object>>map(_pollEvents, _function);
           final Function1<WatchEvent<? extends Object>,WatchEvent<Path>> _function_1 = new Function1<WatchEvent<? extends Object>,WatchEvent<Path>>() {
-            public WatchEvent<Path> apply(final WatchEvent<? extends Object> it) {
-              return ((WatchEvent<Path>) it);
-            }
-          };
-          Iterable<WatchEvent<Path>> _map = IterableExtensions.<WatchEvent<? extends Object>, WatchEvent<Path>>map(_filter, _function_1);
-          final Function1<WatchEvent<Path>,File> _function_2 = new Function1<WatchEvent<Path>,File>() {
-            public File apply(final WatchEvent<Path> it) {
-              Path _context = it.context();
-              File _file = _context.toFile();
-              return _file;
-            }
-          };
-          Iterable<File> _map_1 = IterableExtensions.<WatchEvent<Path>, File>map(_map, _function_2);
-          final Procedure1<File> _function_3 = new Procedure1<File>() {
-            public void apply(final File it) {
-              run.apply(it);
-            }
-          };
-          IterableExtensions.<File>forEach(_map_1, _function_3);
+              public WatchEvent<Path> apply(final WatchEvent<? extends Object> it) {
+                return ((WatchEvent<Path>) it);
+              }
+            };
+          List<WatchEvent<Path>> _map_1 = ListExtensions.<WatchEvent<? extends Object>, WatchEvent<Path>>map(_map, _function_1);
+          final Function1<WatchEvent<Path>,Boolean> _function_2 = new Function1<WatchEvent<Path>,Boolean>() {
+              public Boolean apply(final WatchEvent<Path> it) {
+                Kind<Path> _kind = it.kind();
+                boolean _notEquals = (!Objects.equal(_kind, StandardWatchEventKinds.OVERFLOW));
+                return Boolean.valueOf(_notEquals);
+              }
+            };
+          Iterable<WatchEvent<Path>> _filter = IterableExtensions.<WatchEvent<Path>>filter(_map_1, _function_2);
+          final Function1<WatchEvent<Path>,Path> _function_3 = new Function1<WatchEvent<Path>,Path>() {
+              public Path apply(final WatchEvent<Path> it) {
+                Watchable _watchable = key.watchable();
+                Path _context = it.context();
+                Path _resolve = ((Path) _watchable).resolve(_context);
+                return _resolve;
+              }
+            };
+          Iterable<Path> _map_2 = IterableExtensions.<WatchEvent<Path>, Path>map(_filter, _function_3);
+          final Function1<Path,File> _function_4 = new Function1<Path,File>() {
+              public File apply(final Path it) {
+                File _file = it.toFile();
+                return _file;
+              }
+            };
+          Iterable<File> _map_3 = IterableExtensions.<Path, File>map(_map_2, _function_4);
+          final Procedure1<File> _function_5 = new Procedure1<File>() {
+              public void apply(final File it) {
+                run.apply(it);
+              }
+            };
+          IterableExtensions.<File>forEach(_map_3, _function_5);
+          boolean _reset = key.reset();
+          valid = _reset;
         }
-        boolean _reset = key.reset();
-        _dowhile = _reset;
-      } while(_dowhile);
+        _while = valid;
+      }
     } catch (Throwable _e) {
       throw Exceptions.sneakyThrow(_e);
     }
@@ -204,6 +234,14 @@ public class Watcher extends AbstractMojo {
         File _absoluteFile = file.getAbsoluteFile();
         String _parent = _absoluteFile.getParent();
         final Path path = Paths.get(_parent);
+        Log _log = this.getLog();
+        String _plus = ("register: " + path);
+        String _plus_1 = (_plus + "\t");
+        String _plus_2 = (_plus_1 + file);
+        String _plus_3 = (_plus_2 + "\n");
+        boolean _isAbsolute = path.isAbsolute();
+        String _plus_4 = (_plus_3 + Boolean.valueOf(_isAbsolute));
+        _log.debug(_plus_4);
         WatchKey _register = path.register(this.watchService, StandardWatchEventKinds.ENTRY_MODIFY);
         _xblockexpression = (_register);
       }
